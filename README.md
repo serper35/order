@@ -1,7 +1,18 @@
-# Логирование с использованием Spring AOP
-Этот проект демонстрирует реализацию логирования с использованием Spring AOP в системе обработки заказов на основе Spring. Функциональность логирования перехватывает вызовы методов и обработку исключений, не изменяя при этом основную бизнес-логику.
+# Аутентификация и авторизация с использованием Spring Security и JWT  
+
+## Описание проекта  
+Этот проект представляет собой веб-приложение на базе Spring Boot, реализующее механизм аутентификации и авторизации пользователей с использованием JWT (JSON Web Tokens). Проект использует Spring Security для обеспечения безопасности и JWT для управления сеансами пользователей.
+
+## Основные возможности  
+- Аутентификация пользователей: Пользователи могут получить токен доступа после успешной аутентификации.
+- Авторизация: Токен используется для доступа к защищенным ресурсам API.
+- JWT: Токены JWT используются для безопасного управления сеансами и хранения информации о пользователе.
 
 ## Структура проекта
+- Config: Конфигурация безопасности. Настройка Spring Security.
+Фильтрация запросов и проверка JWT.
+- Util:  Утилиты JWT. Генерация, верификация и извлечение информации из JWT токенов.
+- Filter: Обработка JWT токенов и установка аутентификации в контексте Spring Security.
 - Aspect: Содержит аспект логирования, который перехватывает вызовы методов и исключения для их логирования.
 - Controller: REST-контроллеры, обрабатывающие HTTP-запросы.
 - DTO (Data Transfer Object): Объекты, используемые для передачи данных между слоями приложения.
@@ -11,15 +22,6 @@
 - Repository: Интерфейсы для доступа к данным.
 - Service: Классы, содержащие бизнес-логику.
 - Tests: Тестовые классы, проверяющие логику сервиса и функциональность логирования.
-
-## Реализация логирования
-
-### Конфигурация Аспекта
-Аспект логирования перехватывает вызовы методов в сервисном слое и логирует имя метода, аргументы и любые выбрасываемые исключения.
-### Примеры логов
-Пример логов, которые могут быть сгенерированы при вызове метода getOrder в сервисном слое:
-- `2024-08-13T00:51:08.794+03:00  INFO 8888 --- [Order] [nio-8080-exec-2] ru.t1.Order.aspect.LoggingAspect         : Calling method getOrder with args [3]`
-- `2024-08-13T00:51:08.901+03:00  INFO 8888 --- [Order] [nio-8080-exec-2] ru.t1.Order.aspect.LoggingAspect         : Returning from method getOrder with result OrderDTO{id=3, description='Заказ 1', status='PENDING', userId=4}`
 
 ## Начало работы
 ### Предварительные требования
@@ -33,6 +35,9 @@
 - PostgreSQL
 - Log4j2
 - Lombok
+- Spring Security
+- Springdoc OpenAPI
+- Jwt
 
 ## Сборка и запуск приложения
 
@@ -48,38 +53,36 @@ API будет доступен по адресу http://localhost:8080.
 
 ## Тестирование
 ### Тесты логирования
-Следующий тест проверяет, что аспект логирования правильно логирует вызов метода deleteOrder при негативном сценарии:  
+Следующий тест проверяет,  что при успешной регистрации возвращается правильный статус:  
 
-`@ExtendWith(OutputCaptureExtension.class)`  
-`@SpringBootTest`  
-`public class OrderServiceImplTest {`  
+`@SpringBootTest  
+@AutoConfigureMockMvc  
+public class AuthControllerTest {
 
     @Autowired
-    private OrderServiceImpl orderService;
+    private MockMvc mockMvc;
 
     @MockBean
-    private OrderRepository orderRepository;
+    private UserServiceImpl userService;
 
     @MockBean
-    private UserRepository userRepository;
+    private JwtTokenUtil jwtUtil;
 
     @MockBean
-    private Mapper mapper;
-    void testDeleteOrderNotFoundLogging(CapturedOutput output) {
-        when(orderRepository.findById(1)).thenReturn(Optional.empty());
+    private PasswordEncoder passwordEncoder;
 
-        assertThrows(OrderNotFoundException.class, () -> orderService.deleteOrder(1));
+    @Test
+    public void testRegisterSuccess() throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        RegisterRequest request = new RegisterRequest("username", "password", "email@example.com");
+        UserDTO userDTO = new UserDTO();
+        when(userService.createUser(any(UserDTO.class))).thenReturn(userDTO);
 
-        // Проверка логов
-        assertThat(output).contains("Calling method deleteOrder with args")
-                .contains("Exception thrown in method deleteOrder");
-    }
-    }
-  c результатом: 
-- `2024-08-13T01:04:10.465+03:00  INFO 3820 --- [Order] [           main] ru.t1.Order.aspect.LoggingAspect         : Calling method deleteOrder with args [1]`
-- `2024-08-13T01:04:10.466+03:00 ERROR 3820 --- [Order] [           main] ru.t1.Order.aspect.LoggingAspect         : Exception thrown in method deleteOrder: Order not found exception`
-
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+    }`
 ## Заключение
-Этот проект демонстрирует, как можно эффективно использовать Spring AOP для отделения логики логирования от бизнес-логики, что делает код более модульным и легким в обслуживании.
-  
-
+В этом проекте реализован механизм аутентификации и авторизации с использованием Spring Security и JSON Web Tokens (JWT), что обеспечивает надежную защиту веб-приложения.
+Проект предоставляет полное решение для управления безопасностью веб-приложения, включая документирование API через Swagger и реализацию тестов для обеспечения надежности.
